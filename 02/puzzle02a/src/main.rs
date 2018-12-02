@@ -20,7 +20,7 @@ fn main() {
 fn count(s: &str) -> (bool, bool) {
     let mut h = HashMap::new();
     for c in s.chars() {
-        h.insert(c, h.get(&c).unwrap_or(&0) + 1);
+        *h.entry(c).or_insert(0) += 1;
     }
     h.values()
         .map(|v| (*v == 2, *v == 3))
