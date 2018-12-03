@@ -11,8 +11,9 @@ fn main() {
 
     let rectangles = lines
         .map(|s| {
-            let caps = re.captures(&s).unwrap();
-            caps.iter()
+            re.captures(&s)
+                .unwrap()
+                .iter()
                 .skip(1)
                 .map(|s| s.unwrap().as_str().parse().unwrap())
                 .collect::<Vec<usize>>()
