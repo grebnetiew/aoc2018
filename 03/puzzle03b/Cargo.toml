@@ -1,0 +1,8 @@
+[package]
+name = "puzzle03b"
+version = "0.1.0"
+authors = ["Erik Weitenberg <eweitenberg@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+regex = "0.2"
