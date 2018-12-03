@@ -31,7 +31,7 @@ fn main() {
     for v in rectangles {
         for i in v[0]..(v[0] + v[2]) {
             for j in v[1]..(v[1] + v[3]) {
-                fabric[width * j + i] += 1;
+                fabric[width * j + i] = fabric[width * j + i].saturating_add(1);
             }
         }
     }
