@@ -35,11 +35,8 @@ fn main() {
         intersecting_rects
             .iter()
             .enumerate()
-            .filter(|&(_, &b)| !b)
+            .filter_map(|(i, &intersects)| if intersects { None } else { Some(i + 1) }) // because line 0 has id 1
             .next()
-            .unwrap()
-            .0
-            + 1 // because line 0 has id 1
     );
 }
 
