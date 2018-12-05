@@ -9,9 +9,7 @@ fn main() {
         .filter_map(Result::ok)
         .next()
         .expect("No input")
-        .as_str()
-        .chars()
-        .map(|c| c as u8)
+        .bytes()
         .collect();
 
     let lengths: Vec<_> = (0..26)
