@@ -12,12 +12,14 @@ fn main() {
         .bytes()
         .collect();
 
-    let lengths: Vec<_> = (0..26)
-        .map(|i| react(remove_elem(&elements, 'A' as u8 + i)))
-        .collect();
-
     println!("{:?}", react(elements.clone()));
-    println!("{:?}", lengths.iter().min().unwrap());
+    println!(
+        "{:?}",
+        (0..26)
+            .map(|i| react(remove_elem(&elements, 'A' as u8 + i)))
+            .min()
+            .unwrap()
+    );
 }
 
 const CAPITAL: u8 = ('a' as u8) - ('A' as u8);
