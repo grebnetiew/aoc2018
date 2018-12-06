@@ -75,16 +75,8 @@ fn main() {
 }
 
 fn manhattan(p: (usize, usize), q: (usize, usize)) -> usize {
-    let mut d = 0;
-    if p.0 > q.0 {
-        d += p.0 - q.0;
-    } else {
-        d += q.0 - p.0
-    }
-    if p.1 > q.1 {
-        d += p.1 - q.1;
-    } else {
-        d += q.1 - p.1
-    }
-    d
+    // I chose unsigned integers for the coordinates, so now I have to deal with
+    // overflow on subtraction. This tries p - q and if that overflowed, gives q - p.
+    p.0.checked_sub(q.0).unwrap_or(q.0.wrapping_sub(p.0))
+        + p.1.checked_sub(q.1).unwrap_or(q.1.wrapping_sub(p.1))
 }
