@@ -6,7 +6,6 @@ use itertools::Itertools;
 
 fn main() {
     let stdin = io::stdin();
-    let (mut width, mut height) = (0, 0);
     let points: Vec<(usize, usize)> = stdin
         .lock()
         .lines()
@@ -17,15 +16,12 @@ fn main() {
                 .next_tuple()
                 .expect("Lines must contain two numbers")
         })
-        .map(|tup: (_, _)| {
-            width = max(width, tup.0);
-            height = max(height, tup.1);
-            tup
-        })
         .collect();
 
-    width += 2;
-    height += 2;
+    let (width, height) = points.iter().fold((0, 0), |total, pt| {
+        (max(total.0, pt.0 + 1), max(total.1, pt.1 + 1))
+    });
+    // We add 2, to ensure the maximum coordinate fits inside the grid
 
     let mut scores = vec![0; points.len()];
     let mut disqualify = vec![false; points.len()];
