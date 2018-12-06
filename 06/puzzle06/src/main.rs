@@ -31,19 +31,16 @@ fn main() {
 
     for y in 0..height {
         for x in 0..width {
-            // Part a: record the closest point for each coordinate in the area
-            let min_dist = points
+            let distances = points
                 .iter()
                 .map(|p| manhattan(*p, (x, y)))
                 .enumerate()
-                .min_by_key(|(_, d)| *d)
-                .unwrap();
+                .collect::<Vec<_>>();
+            // Part a: record the closest point for each coordinate in the area
 
-            if points
-                .iter()
-                .filter(|p| manhattan(**p, (x, y)) == min_dist.1)
-                .count()
-                == 1
+            let min_dist = distances.iter().min_by_key(|(_, d)| *d).unwrap();
+
+            if distances.iter().filter(|d| d.1 == min_dist.1).count() == 1
             // ignore any coordinates tied for closest point
             {
                 if x == 0 || x == width || y == 0 || y == width {
@@ -54,12 +51,7 @@ fn main() {
             }
 
             // Part b: count coordinates with total distance under 10000
-            if points
-                .iter()
-                .map(|p| manhattan(*p, (x, y)))
-                .fold(0, |m, n| n.saturating_add(m))
-                < 10000
-            {
+            if distances.iter().map(|t| t.1).sum::<usize>() < 10000 {
                 region_size += 1;
             }
         }
