@@ -1,8 +1,9 @@
+extern crate itertools;
+
+use itertools::Itertools;
 use std::cmp::max;
 use std::io; // provides io's stdin()
 use std::io::BufRead;
-extern crate itertools;
-use itertools::Itertools;
 
 fn main() {
     let stdin = io::stdin();
@@ -77,6 +78,9 @@ fn main() {
 fn manhattan(p: (usize, usize), q: (usize, usize)) -> usize {
     // I chose unsigned integers for the coordinates, so now I have to deal with
     // overflow on subtraction. This tries p - q and if that overflowed, gives q - p.
-    p.0.checked_sub(q.0).unwrap_or(q.0.wrapping_sub(p.0))
-        + p.1.checked_sub(q.1).unwrap_or(q.1.wrapping_sub(p.1))
+    abs_sub(p.0, q.0) + abs_sub(p.1, q.1)
+}
+
+fn abs_sub(x: usize, y: usize) -> usize {
+    x.checked_sub(y).unwrap_or(y.wrapping_sub(x))
 }
