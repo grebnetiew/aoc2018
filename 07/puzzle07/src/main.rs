@@ -33,35 +33,32 @@ fn main() {
     const WORKERS: usize = 5;
     const EXTRA_TIME: usize = 60;
 
-    let mut workers = vec![(None, 0); WORKERS];
+    let mut workers: Vec<Task> = vec![Default::default(); WORKERS];
     let mut done = Vec::new();
     let mut time = 0;
 
     loop {
         for w in 0..WORKERS {
-            if let Some(task) = workers[w].0 {
-                workers[w].1 -= 1;
-                if workers[w].1 == 0 {
+            if let Some(task) = workers[w].current {
+                workers[w].time_left -= 1;
+                if workers[w].time_left == 0 {
                     done.push(task);
-                    workers[w].0 = None;
-                    workers[w].1 = 0;
+                    workers[w] = Default::default();
                 }
             }
         }
-        let mut all_idle = true;
         for w in 0..WORKERS {
-            if workers[w].0.is_none() {
+            if workers[w].current.is_none() {
                 if let Some(next) = available(&all, &done, &task_order) {
-                    workers[w].0 = Some(next);
-                    workers[w].1 = (next as usize) - ('A' as usize) + EXTRA_TIME + 1;
+                    workers[w] = Task {
+                        current: Some(next),
+                        time_left: (next as usize) - ('A' as usize) + EXTRA_TIME + 1,
+                    };
                     all = all.into_iter().filter(|&t| t != next).collect();
-                    all_idle = false;
                 }
-            } else {
-                all_idle = false;
             }
         }
-        if all_idle {
+        if workers.iter().filter(|w| w.current.is_some()).count() == 0 {
             break;
         }
         time += 1;
@@ -92,6 +89,12 @@ fn available(wait: &Vec<char>, done: &Vec<char>, task_order: &Vec<(char, char)>)
         .filter(|c| !done.contains(c) && !not_yet.contains(c))
         .map(|c| *c)
         .min()
+}
+
+#[derive(Clone, Default)]
+struct Task {
+    current: Option<char>,
+    time_left: usize,
 }
 
 struct CharRangeInclusive(char, char);
