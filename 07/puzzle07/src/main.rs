@@ -19,20 +19,13 @@ fn main() {
     }
     all.sort();
     all.dedup();
-    let mut done = all.clone();
-    for (_a, b) in less_than.iter() {
-        done = done.into_iter().filter(|c| c != b).collect::<Vec<char>>();
-    }
+    let mut done = Vec::new();
     println!("a{:?}", all);
 
-    let mut do_more = available(&all, &done, &less_than);
-
-    while do_more.len() > 0 {
-        println!("d{:?}", done);
-        println!("n{:?}", do_more);
-        do_more.sort();
-        done.push(do_more[0]);
-        do_more = available(&all, &done, &less_than);
+    while let Some(do_more) = available(&all, &done, &less_than) {
+        println!("d {:?}", done.iter().collect::<String>());
+        println!("n {:?}", do_more);
+        done.push(do_more);
     }
 
     println!("{:?}", done.iter().collect::<String>());
@@ -48,7 +41,7 @@ fn parse_line(l: Result<String, Error>) -> (char, char) {
         .unwrap()
 }
 
-fn available(all: &Vec<char>, done: &Vec<char>, less_than: &Vec<(char, char)>) -> Vec<char> {
+fn available(all: &Vec<char>, done: &Vec<char>, less_than: &Vec<(char, char)>) -> Option<char> {
     let mut not_yet: Vec<char> = Vec::new();
     for (before, after) in less_than.iter() {
         if !done.contains(before) {
@@ -58,5 +51,5 @@ fn available(all: &Vec<char>, done: &Vec<char>, less_than: &Vec<(char, char)>) -
     all.iter()
         .filter(|c| !done.contains(c) && !not_yet.contains(c))
         .map(|c| *c)
-        .collect()
+        .min()
 }
