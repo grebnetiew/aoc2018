@@ -3,26 +3,39 @@ extern crate regex;
 
 use itertools::Itertools;
 use regex::Regex;
-use std::cmp::Ordering;
 use std::io;
 use std::io::BufRead;
 use std::io::Error;
 
 fn main() {
     let stdin = io::stdin();
-    let less_than: Vec<(char, char)> = stdin.lock().lines().map(|l| parse_line(l)).collect();
+    let mut less_than: Vec<(char, char)> = stdin.lock().lines().map(|l| parse_line(l)).collect();
+    less_than.sort_by_key(|(_, k)| *k);
 
-    let mut chars: Vec<char> = Vec::new();
+    let mut all: Vec<char> = Vec::new();
     for (a, b) in less_than.iter() {
-        chars.push(*a);
-        chars.push(*b);
+        all.push(*a);
+        all.push(*b);
     }
-    chars.sort();
-    chars.dedup();
-    chars.sort_by(|a, b| cmp(*a, *b, &less_than));
-    println!("{:?}", cmp('C', 'A', &less_than));
+    all.sort();
+    all.dedup();
+    let mut done = all.clone();
+    for (_a, b) in less_than.iter() {
+        done = done.into_iter().filter(|c| c != b).collect::<Vec<char>>();
+    }
+    println!("a{:?}", all);
 
-    println!("{:?}", chars);
+    let mut do_more = available(&all, &done, &less_than);
+
+    while do_more.len() > 0 {
+        println!("d{:?}", done);
+        println!("n{:?}", do_more);
+        do_more.sort();
+        done.push(do_more[0]);
+        do_more = available(&all, &done, &less_than);
+    }
+
+    println!("{:?}", done.iter().collect::<String>());
 }
 
 fn parse_line(l: Result<String, Error>) -> (char, char) {
@@ -35,23 +48,15 @@ fn parse_line(l: Result<String, Error>) -> (char, char) {
         .unwrap()
 }
 
-fn cmp(a: char, b: char, ordering: &Vec<(char, char)>) -> std::cmp::Ordering {
-    match cmp_less(a, b, ordering) {
-        Ordering::Equal => cmp_less(b, a, ordering),
-        t => t,
-    }
-}
-
-fn cmp_less(a: char, b: char, ordering: &Vec<(char, char)>) -> std::cmp::Ordering {
-    for (x, y) in ordering.iter() {
-        if a == *x {
-            if b == *y {
-                return Ordering::Less;
-            }
-            if cmp(*y, b, ordering) == Ordering::Less {
-                return Ordering::Less;
-            }
+fn available(all: &Vec<char>, done: &Vec<char>, less_than: &Vec<(char, char)>) -> Vec<char> {
+    let mut not_yet: Vec<char> = Vec::new();
+    for (before, after) in less_than.iter() {
+        if !done.contains(before) {
+            not_yet.push(*after);
         }
     }
-    Ordering::Equal
+    all.iter()
+        .filter(|c| !done.contains(c) && !not_yet.contains(c))
+        .map(|c| *c)
+        .collect()
 }
