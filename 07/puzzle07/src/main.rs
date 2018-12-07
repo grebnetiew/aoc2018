@@ -18,11 +18,7 @@ fn main() {
     let mut all: Vec<char> = CharRangeInclusive('A', highest).collect();
 
     // Part 1. Do the tasks in order
-    let mut done = Vec::new();
-    while let Some(do_more) = available(&all, &done, &task_order) {
-        done.push(do_more);
-    }
-
+    let done: Vec<char> = TaskIterator(&all, Vec::new(), &task_order).collect();
     println!("{:}", done.iter().collect::<String>());
 
     // Part 2. Do the tasks in parallel, measure time
@@ -32,12 +28,13 @@ fn main() {
     let mut workers: Vec<Task> = vec![Default::default(); WORKERS];
     let mut done = Vec::new();
     let mut time = 0;
+    let mut time_delta = 1;
 
     loop {
         // Step all jobs, and free workers who are done
         for w in workers.iter_mut() {
             if let Some(task) = w.current {
-                w.time_left -= 1;
+                w.time_left -= time_delta;
                 if w.time_left == 0 {
                     done.push(task);
                     *w = Default::default();
@@ -56,10 +53,16 @@ fn main() {
             }
         }
         // If everyone is still idle, we're done
-        if workers.iter().filter(|w| w.current.is_some()).count() == 0 {
+        if workers.iter().filter_map(|w| w.current).count() == 0 {
             break;
         }
-        time += 1;
+        // To be faster, step time by min of length of active jobs
+        time_delta = workers
+            .iter()
+            .filter_map(|w| w.current.and(Some(w.time_left)))
+            .min()
+            .unwrap();
+        time += time_delta;
     }
 
     println!("{:?}", time);
@@ -73,19 +76,19 @@ fn parse_line(l: Result<String, Error>) -> (char, char) {
         .take(2)
         .map(|s| s.get(1).unwrap().as_str().chars().next().unwrap())
         .next_tuple()
-        .unwrap()
+        .expect("Line did not fit the format")
 }
 
 fn available(wait: &Vec<char>, done: &Vec<char>, task_order: &Vec<(char, char)>) -> Option<char> {
-    let not_yet: Vec<char> = task_order
+    let unavailable_tasks: Vec<char> = task_order
         .iter()
-        .filter(|t| !done.contains(&t.0))
-        .map(|t| t.1)
+        .filter(|(prerequisite, _task)| !done.contains(&prerequisite))
+        .map(|(_undone_prerequisite, undoable_task)| *undoable_task)
         .collect();
 
     wait.iter()
-        .filter(|c| !done.contains(c) && !not_yet.contains(c))
-        .map(|c| *c)
+        .filter(|task| !done.contains(task) && !unavailable_tasks.contains(task))
+        .map(|&ch| ch)
         .min()
 }
 
@@ -100,12 +103,24 @@ impl Iterator for CharRangeInclusive {
     type Item = char;
 
     fn next(&mut self) -> Option<char> {
-        if self.0 <= self.1 {
-            let v = self.0;
-            self.0 = (v as u8 + 1) as char;
-            Some(v)
-        } else {
-            None
+        if self.0 > self.1 {
+            return None;
         }
+        let v = self.0;
+        self.0 = (v as u8 + 1) as char;
+        Some(v)
+    }
+}
+
+struct TaskIterator<'a>(&'a Vec<char>, Vec<char>, &'a Vec<(char, char)>);
+impl Iterator for TaskIterator<'_> {
+    type Item = char;
+
+    fn next(&mut self) -> Option<char> {
+        if let Some(next) = available(self.0, &self.1, self.2) {
+            self.1.push(next);
+            return Some(next);
+        }
+        None
     }
 }
