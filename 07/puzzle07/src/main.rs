@@ -33,28 +33,27 @@ fn main() {
     const WORKERS: usize = 5;
     const EXTRA_TIME: usize = 60;
 
-    let mut workers_task = vec![None; WORKERS];
-    let mut workers_time = vec![0; WORKERS];
+    let mut workers = vec![(None, 0); WORKERS];
     let mut done = Vec::new();
     let mut time = 0;
 
     loop {
         for w in 0..WORKERS {
-            if let Some(task) = workers_task[w] {
-                workers_time[w] -= 1;
-                if workers_time[w] == 0 {
+            if let Some(task) = workers[w].0 {
+                workers[w].1 -= 1;
+                if workers[w].1 == 0 {
                     done.push(task);
-                    workers_task[w] = None;
-                    workers_time[w] = 0;
+                    workers[w].0 = None;
+                    workers[w].1 = 0;
                 }
             }
         }
         let mut all_idle = true;
         for w in 0..WORKERS {
-            if workers_task[w].is_none() {
+            if workers[w].0.is_none() {
                 if let Some(next) = available(&all, &done, &task_order) {
-                    workers_task[w] = Some(next);
-                    workers_time[w] = (next as usize) - ('A' as usize) + EXTRA_TIME + 1;
+                    workers[w].0 = Some(next);
+                    workers[w].1 = (next as usize) - ('A' as usize) + EXTRA_TIME + 1;
                     all = all.into_iter().filter(|&t| t != next).collect();
                     all_idle = false;
                 }
