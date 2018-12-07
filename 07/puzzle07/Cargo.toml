@@ -1,0 +1,9 @@
+[package]
+name = "puzzle07"
+version = "0.1.0"
+authors = ["Erik Weitenberg <eweitenberg@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+regex = "*"
+itertools = "*"
