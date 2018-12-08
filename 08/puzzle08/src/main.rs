@@ -33,10 +33,7 @@ where
     let num_mdata = iter.next().unwrap();
 
     let total_meta: usize = (0..num_nodes).map(|_| take_metadata(iter)).sum();
-    total_meta
-        + (0..num_mdata)
-            .map(|_| (*iter).next().unwrap())
-            .sum::<usize>()
+    total_meta + iter.take(num_mdata).sum::<usize>()
 }
 
 // This function takes a "dyn" iterator, which Rust calls a Trait object (cf "impl"
@@ -51,13 +48,12 @@ fn sum_nodevalue(iter: &mut dyn Iterator<Item = usize>) -> usize {
     let num_mdata = iter.next().unwrap();
 
     if num_nodes == 0 {
-        return (0..num_mdata).map(|_| (*iter).next().unwrap()).sum();
+        return iter.take(num_mdata).sum();
     }
 
     let child_values: Vec<_> = (0..num_nodes).map(|_| sum_nodevalue(iter)).collect();
-    (0..num_mdata)
-        .map(|_| (*iter).next().unwrap() - 1)
-        .filter(|&index| index < num_nodes)
-        .map(|index| child_values[index])
+    iter.take(num_mdata)
+        .filter(|&index| index <= num_nodes)
+        .map(|index| child_values[index - 1])
         .sum()
 }
