@@ -31,6 +31,7 @@ where
 {
     let num_nodes = iter.next().unwrap();
     let num_mdata = iter.next().unwrap();
+
     let total_meta: usize = (0..num_nodes).map(|_| take_metadata(iter)).sum();
     total_meta
         + (0..num_mdata)
@@ -49,13 +50,11 @@ fn sum_nodevalue(iter: &mut dyn Iterator<Item = usize>) -> usize {
     let num_nodes = iter.next().unwrap();
     let num_mdata = iter.next().unwrap();
 
-    // We still have to iterate over the child nodes, even if they're not needed
-    let child_values: Vec<_> = (0..num_nodes).map(|_| sum_nodevalue(iter)).collect();
-
     if num_nodes == 0 {
         return (0..num_mdata).map(|_| (*iter).next().unwrap()).sum();
     }
 
+    let child_values: Vec<_> = (0..num_nodes).map(|_| sum_nodevalue(iter)).collect();
     (0..num_mdata)
         .map(|_| (*iter).next().unwrap() - 1)
         .filter(|&index| index < num_nodes)
