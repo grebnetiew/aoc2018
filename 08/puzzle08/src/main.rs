@@ -13,7 +13,7 @@ fn main() {
         .collect();
 
     println!("{:?}", take_metadata(&mut numbers.iter().map(|s| *s)));
-    println!("{:?}", take_node_val(&mut numbers.iter().map(|s| *s)));
+    println!("{:?}", sum_nodevalue(&mut numbers.iter().map(|s| *s)));
 }
 
 // For my own purposes of learning the language, these functions each take an
@@ -31,7 +31,7 @@ where
 {
     let num_nodes = iter.next().unwrap();
     let num_mdata = iter.next().unwrap();
-    let total_meta = (0..num_nodes).map(|_| take_metadata(iter)).sum::<usize>();
+    let total_meta: usize = (0..num_nodes).map(|_| take_metadata(iter)).sum();
     total_meta
         + (0..num_mdata)
             .map(|_| (*iter).next().unwrap())
@@ -40,24 +40,20 @@ where
 
 // This function takes a "dyn" iterator, which Rust calls a Trait object (cf "impl"
 // which would be a Trait implementation). As I understand it, it is like the vtables
-// in C++: results in only one function take_node_val, and .next checks at runtime
+// in C++: results in only one function sum_nodevalue, and .next checks at runtime
 // what type your iterator is and which function .next it should call. Takes some time,
 // saves space if you have many kinds of iterators.
 // Typing "impl" instead of "dyn" fails catastrophically. I'm not sure why.
 
-fn take_node_val(iter: &mut dyn Iterator<Item = usize>) -> usize {
+fn sum_nodevalue(iter: &mut dyn Iterator<Item = usize>) -> usize {
     let num_nodes = iter.next().unwrap();
     let num_mdata = iter.next().unwrap();
 
     // We still have to iterate over the child nodes, even if they're not needed
-    let child_values = (0..num_nodes)
-        .map(|_| take_node_val(iter))
-        .collect::<Vec<_>>();
+    let child_values: Vec<_> = (0..num_nodes).map(|_| sum_nodevalue(iter)).collect();
 
     if num_nodes == 0 {
-        return (0..num_mdata)
-            .map(|_| (*iter).next().unwrap())
-            .sum::<usize>();
+        return (0..num_mdata).map(|_| (*iter).next().unwrap()).sum();
     }
 
     (0..num_mdata)
