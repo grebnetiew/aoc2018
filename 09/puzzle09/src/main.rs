@@ -9,7 +9,7 @@ fn main() {
         .next()
         .expect("Error: No lines")
         .expect("Error: Read error")
-        .split(" ")
+        .split_whitespace()
         .filter_map(|s| s.parse().ok())
         .collect();
 
