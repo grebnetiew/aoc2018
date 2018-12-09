@@ -41,16 +41,13 @@ fn cycle(vd: &mut VecDeque<u32>, idx: isize) {
     if vd.len() == 0 {
         return;
     }
-    if idx > 0 {
-        for _ in 0..idx {
-            let e = vd.pop_front().unwrap();
-            vd.push_back(e);
-        }
-    } else {
-        for _ in 0..-idx {
-            let e = vd.pop_back().unwrap();
-            vd.push_front(e);
-        }
+    for _ in 0..idx {
+        let e = vd.pop_front().unwrap();
+        vd.push_back(e);
+    }
+    for _ in 0..-idx {
+        let e = vd.pop_back().unwrap();
+        vd.push_front(e);
     }
 }
 
