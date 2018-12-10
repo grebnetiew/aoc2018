@@ -25,7 +25,7 @@ fn main() {
         .collect();
 
     let mut time = 0;
-    for _ in 0..1000 {
+    loop {
         display(&data);
         print!(
             "Time is {:}. Advance how many seconds forward or backward? ",
@@ -51,21 +51,21 @@ const SCREENH: usize = 10;
 
 fn display(point_data: &Vec<Vec<i32>>) {
     let mut screen = vec![' '; SCREENW * SCREENH];
-    let bounds = point_data.iter().fold(
+    let (xmin, ymin, xmax, ymax) = point_data.iter().fold(
         (std::i32::MAX, std::i32::MAX, std::i32::MIN, std::i32::MIN),
         |(a, b, c, d), v| (min(a, v[0]), min(b, v[1]), max(c, v[0]), max(d, v[1])),
     );
     println!(
         "Display is LT {:?}, RB {:?}, that is {:} x {:}",
-        (bounds.0, bounds.1),
-        (bounds.2, bounds.3),
-        bounds.2 - bounds.0 + 1,
-        bounds.3 - bounds.1 + 1
+        (xmin, ymin),
+        (xmax, ymax),
+        xmax - xmin + 1,
+        ymax - ymin + 1
     );
 
     for v in point_data.iter() {
-        let x = rescale(v[0], bounds.0, bounds.2, 0, SCREENW as i32 - 1);
-        let y = rescale(v[1], bounds.1, bounds.3, 0, SCREENH as i32 - 1);
+        let x = rescale(v[0], xmin, xmax, 0, SCREENW as i32 - 1);
+        let y = rescale(v[1], ymin, ymax, 0, SCREENH as i32 - 1);
         screen[(y as usize * SCREENW + x as usize)] = '*';
     }
 
