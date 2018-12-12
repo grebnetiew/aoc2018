@@ -1,3 +1,4 @@
+use std::default::Default;
 use std::io;
 use std::io::BufRead;
 
@@ -30,10 +31,8 @@ fn max_power_square(block_size: usize, serial: usize) -> (usize, usize, i32) {
     let mut partial_sum_grid = vec![0; GRIDSZ * GRIDSZ];
     for y in 0..GRIDSZ {
         for x in 0..GRIDSZ {
-            partial_sum_grid[y * GRIDSZ + x] = power(x + 1, y + 1, serial)
-                + lenient_matrix_access(&partial_sum_grid, x, 1, y, 0)
-                + lenient_matrix_access(&partial_sum_grid, x, 0, y, 1)
-                - lenient_matrix_access(&partial_sum_grid, x, 1, y, 1);
+            partial_sum_grid[y * GRIDSZ + x] =
+                power(x + 1, y + 1, serial) - partial_sum(&partial_sum_grid, x, y, 1);
         }
     }
 
@@ -41,11 +40,7 @@ fn max_power_square(block_size: usize, serial: usize) -> (usize, usize, i32) {
 
     for y in 0..(GRIDSZ - block_size + 1) {
         for x in 0..(GRIDSZ - block_size + 1) {
-            let current_power =
-                lenient_matrix_access(&partial_sum_grid, x + block_size, 1, y + block_size, 1)
-                    - lenient_matrix_access(&partial_sum_grid, x + block_size, 1, y, 1)
-                    - lenient_matrix_access(&partial_sum_grid, x, 1, y + block_size, 1)
-                    + lenient_matrix_access(&partial_sum_grid, x, 1, y, 1);
+            let current_power = partial_sum(&partial_sum_grid, x, y, block_size);
 
             if current_power > maximum_power.2 {
                 maximum_power = (x + 1, y + 1, current_power);
@@ -66,11 +61,21 @@ fn max_power(input: usize) -> (usize, usize, usize, i32) {
     maximum_power
 }
 
-fn lenient_matrix_access(m: &Vec<i32>, x: usize, back_dx: usize, y: usize, back_dy: usize) -> i32 {
-    if back_dx > x || back_dy > y {
-        return 0;
+fn lenient_matrix_access<T>(m: &Vec<T>, x: Option<usize>, y: Option<usize>) -> T
+where
+    T: std::default::Default + std::marker::Copy,
+{
+    match (x, y) {
+        (Some(x), Some(y)) => m[y * GRIDSZ + x],
+        _ => Default::default(),
     }
-    m[(y - back_dy) * GRIDSZ + x - back_dx]
+}
+
+fn partial_sum(m: &Vec<i32>, x: usize, y: usize, block_size: usize) -> i32 {
+    lenient_matrix_access(m, Some(x + block_size - 1), Some(y + block_size - 1))
+        - lenient_matrix_access(m, Some(x + block_size - 1), y.checked_sub(1))
+        - lenient_matrix_access(m, x.checked_sub(1), Some(y + block_size - 1))
+        + lenient_matrix_access(m, x.checked_sub(1), y.checked_sub(1))
 }
 
 #[test]
