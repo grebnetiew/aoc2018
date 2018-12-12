@@ -30,16 +30,29 @@ fn main() {
         rules[conf] = caps.get(6).unwrap().as_str().chars().next().unwrap() == '#';
     }
 
+    // Part 1
     for _ in 0..20 {
         current_state = iteration(&current_state, &rules);
     }
-
     println!("{:?}", current_state.iter().sum::<i64>());
 
-    for _ in 20..5000u64 {
+    // Part 2. Wait for the game of pots to stabilize
+    for _ in 20..500 {
         current_state = iteration(&current_state, &rules);
     }
-    println!("{:?}", current_state.iter().sum::<i64>());
+    // The answer is just the sum, so if there are any traveling bits
+    // ..###...
+    // ...###..
+    // this will lead to a linear change in the sum of pot numbers.
+    // Find out the rate of change, and extrapolate.
+    let sum1 = current_state.iter().sum::<i64>();
+    // println!("Iteration 500 is {:?}", sum1);
+    current_state = iteration(&current_state, &rules);
+    let sum2 = current_state.iter().sum::<i64>();
+    // println!("Iteration 501 is {:?}", sum2);
+    let slope = sum2 - sum1;
+    let dt = 50_000_000_000 - 500;
+    println!("Iteration 50e9 is {:?}", sum1 + slope * dt);
 }
 
 fn iteration(current_state: &HashSet<i64>, rules: &Vec<bool>) -> HashSet<i64> {
