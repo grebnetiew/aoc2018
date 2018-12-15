@@ -2,7 +2,6 @@ use std::io;
 use std::io::BufRead;
 
 fn main() {
-    let mut units: Vec<Point> = Vec::new();
     let cave_map: CaveMap = CaveMap(
         io::stdin()
             .lock()
@@ -38,19 +37,16 @@ fn main() {
         round += 1;
 
         let mut casualties: Vec<Point> = Vec::new();
-        for p in units.iter() {
+        for p in units.iter_mut() {
             // The unit at point p might have died
             if casualties.contains(p) {
                 continue;
             }
             // The unit at point p acts
-            if !cave_map.is_in_range_of_target(p) {
-                *p = cave_map.move_to_enemy(p);
-            }
-            if cave_map.is_in_range_of_target(p) {
-                if cave_map.attack_enemy(p) {
-                    casualties.push(*p);
-                }
+            *p = cave_map.move_to_enemy(p);
+
+            if let Some(enemy_pt) = cave_map.attack_enemy(p) {
+                casualties.push(enemy_pt);
             }
         }
 
@@ -76,6 +72,7 @@ enum Tile {
     Empty,
     Wall,
     Unit(Unit),
+    None,
 }
 
 impl Tile {
@@ -100,6 +97,16 @@ impl Unit {
             Unit::Goblin(_) => 1,
         }
     }
+    fn status(&self) -> &Status {
+        match self {
+            Unit::Elf(s) | Unit::Goblin(s) => &*s,
+        }
+    }
+    fn status_mut(&mut self) -> &mut Status {
+        match self {
+            Unit::Elf(s) | Unit::Goblin(s) => &mut *s,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -120,6 +127,44 @@ struct Point {
     x: usize,
 }
 
+impl std::ops::Add for Point {
+    type Output = Point;
+    fn add(self, other: Point) -> Point {
+        Point {
+            x: self.x + other.x,
+            y: self.y + other.y,
+        }
+    }
+}
+
+impl Point {
+    fn neighbours(&self) -> Vec<Point> {
+        // In reading order
+        let mut nb = Vec::new();
+        if self.y > 0 {
+            nb.push(Point {
+                x: self.x,
+                y: self.y - 1,
+            })
+        }
+        if self.x > 0 {
+            nb.push(Point {
+                x: self.x - 1,
+                y: self.y,
+            })
+        }
+        nb.push(Point {
+            x: self.x + 1,
+            y: self.y,
+        });
+        nb.push(Point {
+            x: self.y,
+            y: self.x + 1,
+        });
+        nb
+    }
+}
+
 struct CaveMap(Vec<Vec<Tile>>);
 
 impl CaveMap {
@@ -127,21 +172,59 @@ impl CaveMap {
         self.0.len()
     }
     fn get(&self, p: &Point) -> &Tile {
-        &self.0[p.y][p.x]
+        match &self.0.get(p.y) {
+            Some(row) => row.get(p.x).unwrap_or(&Tile::None),
+            None => &Tile::None,
+        }
     }
     fn get_mut(&mut self, p: &Point) -> &mut Tile {
         &mut self.0[p.y][p.x]
     }
+    fn set(&mut self, p: &Point, t: Tile) {
+        *self.get_mut(p) = t;
+    }
 
     fn is_in_range_of_target(&self, p: &Point) -> bool {
-        unimplemented!()
+        if let Tile::Unit(u) = self.get(p) {
+            for other in p.neighbours().iter().filter_map(|pt| self.get(&pt).unit()) {
+                if u.team() != other.team() {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     fn move_to_enemy(&self, p: &Point) -> Point {
-        unimplemented!()
+        if let Tile::Unit(_) = self.get(p) {
+            if self.is_in_range_of_target(p) {
+                return *p;
+            }
+        }
+        return *p;
     }
 
-    fn attack_enemy(&self, p: &Point) -> bool {
-        unimplemented!()
+    fn attack_enemy(&mut self, p: &Point) -> Option<Point> {
+        // Find target
+        let my_team = self.get(p).unit().unwrap().team();
+        let my_atk = self.get(p).unit().unwrap().status().atk;
+
+        if let Some((other_pt, mut other_unit)) = p
+            .neighbours()
+            .iter_mut()
+            .filter_map(|pt| match self.get_mut(&pt).unit() {
+                Some(other) if my_team != other.team() => Some((pt, other)),
+                _ => None,
+            })
+            .next()
+        {
+            other_unit.status_mut().hp = other_unit.status().hp.saturating_sub(my_atk);
+            if other_unit.status().hp == 0 {
+                self.set(other_pt, Tile::Empty);
+                return Some(*other_pt);
+            }
+        }
+
+        None
     }
 }
