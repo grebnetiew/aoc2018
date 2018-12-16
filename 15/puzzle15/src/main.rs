@@ -1,8 +1,11 @@
+use std::cmp::Ordering;
+use std::collections::BinaryHeap;
+use std::fmt;
 use std::io;
 use std::io::BufRead;
 
 fn main() {
-    let cave_map: CaveMap = CaveMap(
+    let mut cave_map: CaveMap = CaveMap(
         io::stdin()
             .lock()
             .lines()
@@ -64,7 +67,10 @@ fn main() {
 
         // Sort unit positions for next round
         units.sort();
+        round += 1
     }
+    println!("Combat ends in {:} rounds", round);
+    cave_map.print();
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -81,6 +87,27 @@ impl Tile {
             Tile::Unit(u) => Some(*u),
             _ => None,
         }
+    }
+    fn is_empty(&self) -> bool {
+        match self {
+            Tile::Empty => true,
+            _ => false,
+        }
+    }
+}
+impl fmt::Display for Tile {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Tile::Empty => '.',
+                Tile::Wall => '#',
+                Tile::Unit(Unit::Elf(_)) => 'E',
+                Tile::Unit(Unit::Goblin(_)) => 'G',
+                Tile::None => '!',
+            }
+        )
     }
 }
 
@@ -165,6 +192,32 @@ impl Point {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq)]
+struct PointStep {
+    point: Point,
+    origin: Point,
+    distance: usize,
+}
+
+// This implementation of Ord stolen from the docs, as they also use a bin heap
+impl Ord for PointStep {
+    fn cmp(&self, other: &PointStep) -> Ordering {
+        // Notice that the we flip the orderings, so we get the element with minimal distance.
+        // Same for positions: the lowest y,x takes precedence.
+        other
+            .distance
+            .cmp(&self.distance)
+            .then_with(|| other.origin.cmp(&self.origin))
+            .then_with(|| other.point.cmp(&self.point))
+    }
+}
+// `PartialOrd` needs to be implemented as well.
+impl PartialOrd for PointStep {
+    fn partial_cmp(&self, other: &PointStep) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 struct CaveMap(Vec<Vec<Tile>>);
 
 impl CaveMap {
@@ -186,22 +239,66 @@ impl CaveMap {
 
     fn is_in_range_of_target(&self, p: &Point) -> bool {
         if let Tile::Unit(u) = self.get(p) {
-            for other in p.neighbours().iter().filter_map(|pt| self.get(&pt).unit()) {
-                if u.team() != other.team() {
-                    return true;
-                }
+            self.is_in_range_of_team_target(p, u.team())
+        } else {
+            false
+        }
+    }
+    fn is_in_range_of_team_target(&self, p: &Point, t: usize) -> bool {
+        for other in p.neighbours().iter().filter_map(|pt| self.get(&pt).unit()) {
+            if t != other.team() {
+                return true;
             }
         }
         false
     }
 
-    fn move_to_enemy(&self, p: &Point) -> Point {
-        if let Tile::Unit(_) = self.get(p) {
+    fn move_to_enemy(&mut self, p: &Point) -> Point {
+        if let Tile::Unit(u) = self.get(p) {
             if self.is_in_range_of_target(p) {
                 return *p;
             }
+            if let Some(next_point) = self.shortest_path(p, u.team()) {
+                self.set(&next_point, *self.get(p));
+                self.set(p, Tile::Empty);
+
+                return next_point;
+            }
         }
         return *p;
+    }
+    fn shortest_path(&self, p: &Point, team: usize) -> Option<Point> {
+        let mut prio_queue = BinaryHeap::new();
+        // Put the neighbours in as origin points
+        for other in p.neighbours().iter().filter(|pt| self.get(&pt).is_empty()) {
+            prio_queue.push(PointStep {
+                point: *other,
+                origin: *other,
+                distance: 1,
+            });
+        }
+        while let Some(step) = prio_queue.pop() {
+            if self.is_in_range_of_team_target(&step.point, team) {
+                return Some(step.origin);
+            }
+            if step.distance > 50 {
+                // Give up on long paths
+                continue;
+            }
+            for other in step
+                .point
+                .neighbours()
+                .iter()
+                .filter(|pt| self.get(&pt).is_empty())
+            {
+                prio_queue.push(PointStep {
+                    point: *other,
+                    origin: step.origin,
+                    distance: step.distance + 1,
+                });
+            }
+        }
+        None
     }
 
     fn attack_enemy(&mut self, p: &Point) -> Option<Point> {
@@ -224,7 +321,15 @@ impl CaveMap {
                 return Some(*other_pt);
             }
         }
-
         None
+    }
+
+    fn print(&self) {
+        for y in 0..self.0.len() {
+            for x in 0..self.0[0].len() {
+                print!("{}", self.0[y][x]);
+            }
+            println!();
+        }
     }
 }
