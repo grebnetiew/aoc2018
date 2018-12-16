@@ -32,21 +32,38 @@ fn main() {
         }
     }
 
-    let mut round = 0;
+    let mut round = 1;
+
+    println!("Combat starts");
+    cave_map.print();
 
     // Combat starts!
-    loop {
+    'combat: loop {
         // A new round begins
-        round += 1;
-
         let mut casualties: Vec<Point> = Vec::new();
-        for p in units.iter_mut() {
+        println!("{:?}", units);
+        for i in 0..units.len() {
             // The unit at point p might have died
-            if casualties.contains(p) {
+            if casualties.contains(&units[i]) {
                 continue;
             }
+
+            println!("{:?} : {:?}", &units[i], cave_map.get(&units[i]));
+            let team = cave_map.get(&units[i]).unit().unwrap().team();
+            // The unit at point p checks if any targets remain
+            if units
+                .iter()
+                .filter(|p| cave_map.get(p).unit().is_some())
+                .all(|p| cave_map.get(p).unit().unwrap().team() == team)
+            {
+                break 'combat;
+            }
+
+            let p = &mut units[i];
+
             // The unit at point p acts
-            *p = cave_map.move_to_enemy(p);
+
+            *p = cave_map.move_to_enemy(&p);
 
             if let Some(enemy_pt) = cave_map.attack_enemy(p) {
                 casualties.push(enemy_pt);
@@ -54,23 +71,46 @@ fn main() {
         }
 
         for p in casualties.iter() {
+            println!("Casualty at point {:?}", p);
             if let Some(pos) = units.iter().position(|x| *x == *p) {
                 units.remove(pos);
             }
         }
 
-        if units.iter().all(|p| {
-            cave_map.get(p).unit().unwrap().team() == cave_map.get(&units[0]).unit().unwrap().team()
-        }) {
-            break;
-        }
-
         // Sort unit positions for next round
         units.sort();
-        round += 1
+
+        println!("At the end of round {}", round);
+        cave_map.print();
+        println!(
+            "{:?}",
+            units
+                .iter()
+                .filter(|p| cave_map.get(&p).unit().is_some())
+                .filter_map(|p| Some(cave_map.get(&p).unit()?.status().hp))
+                .collect::<Vec<_>>()
+        );
+
+        round += 1;
     }
-    println!("Combat ends in {:} rounds", round);
+    let completed_rounds = round - 1; // Combat ends during a round
+    println!("Combat ends in {:} rounds", completed_rounds);
     cave_map.print();
+    println!(
+        "{:?}",
+        units
+            .iter()
+            .filter_map(|p| Some(cave_map.get(&p).unit()?.status().hp))
+            .collect::<Vec<_>>()
+    );
+
+    let hp_total = units
+        .iter()
+        .filter_map(|p| Some(cave_map.get(&p).unit()?.status().hp))
+        .sum::<usize>();
+    println!("Remaining HP total {:}", hp_total);
+
+    println!("Outcome is {:?}", completed_rounds * hp_total);
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -82,9 +122,15 @@ enum Tile {
 }
 
 impl Tile {
-    fn unit(&self) -> Option<Unit> {
+    fn unit(&self) -> Option<&Unit> {
         match self {
-            Tile::Unit(u) => Some(*u),
+            Tile::Unit(u) => Some(&*u),
+            _ => None,
+        }
+    }
+    fn unit_mut(&mut self) -> Option<&mut Unit> {
+        match self {
+            Tile::Unit(u) => Some(&mut *u),
             _ => None,
         }
     }
@@ -185,14 +231,14 @@ impl Point {
             y: self.y,
         });
         nb.push(Point {
-            x: self.y,
-            y: self.x + 1,
+            x: self.x,
+            y: self.y + 1,
         });
         nb
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 struct PointStep {
     point: Point,
     origin: Point,
@@ -269,6 +315,7 @@ impl CaveMap {
     }
     fn shortest_path(&self, p: &Point, team: usize) -> Option<Point> {
         let mut prio_queue = BinaryHeap::new();
+        let mut visited: Vec<Point> = Vec::new();
         // Put the neighbours in as origin points
         for other in p.neighbours().iter().filter(|pt| self.get(&pt).is_empty()) {
             prio_queue.push(PointStep {
@@ -291,11 +338,14 @@ impl CaveMap {
                 .iter()
                 .filter(|pt| self.get(&pt).is_empty())
             {
-                prio_queue.push(PointStep {
-                    point: *other,
-                    origin: step.origin,
-                    distance: step.distance + 1,
-                });
+                if !visited.contains(other) {
+                    visited.push(*other);
+                    prio_queue.push(PointStep {
+                        point: *other,
+                        origin: step.origin,
+                        distance: step.distance + 1,
+                    });
+                }
             }
         }
         None
@@ -306,19 +356,26 @@ impl CaveMap {
         let my_team = self.get(p).unit().unwrap().team();
         let my_atk = self.get(p).unit().unwrap().status().atk;
 
-        if let Some((other_pt, mut other_unit)) = p
+        let mut adjacent_enemies: Vec<Point> = p
             .neighbours()
-            .iter_mut()
-            .filter_map(|pt| match self.get_mut(&pt).unit() {
-                Some(other) if my_team != other.team() => Some((pt, other)),
-                _ => None,
+            .iter()
+            .filter(|pt| match self.get(&pt).unit() {
+                Some(other) if my_team != other.team() => true,
+                _ => false,
             })
-            .next()
-        {
+            .map(|pt| *pt)
+            .collect();
+        adjacent_enemies.sort_by_key(|pt| self.get(&pt).unit().unwrap().status().hp);
+
+        if let Some(other_pt) = adjacent_enemies.into_iter().next() {
+            println!("Unit at {:?} attacks {:?}", p, other_pt);
+            let other_unit = self.get_mut(&other_pt).unit_mut().unwrap();
             other_unit.status_mut().hp = other_unit.status().hp.saturating_sub(my_atk);
+            println!("  It now has hp {:?}", other_unit.status().hp);
             if other_unit.status().hp == 0 {
-                self.set(other_pt, Tile::Empty);
-                return Some(*other_pt);
+                println!("  D.E.D");
+                self.set(&other_pt, Tile::Empty);
+                return Some(other_pt);
             }
         }
         None
