@@ -1,5 +1,6 @@
 #![feature(try_trait)] // Please use the nightly build, I want to use the shiny thing
 use regex::Regex;
+use std::collections::HashMap;
 use std::io;
 use std::io::BufRead;
 
@@ -33,33 +34,37 @@ fn main() {
         if computer.ip == 28 {
             // r5 and r0 are being compared, if equal the program will halt
             println!("{:?}", computer.reg.0[5]);
+            break;
         }
         computer.execute(&program[computer.ip]);
     }
-}
 
-fn secret(init: usize) {
-    let (r0, mut r2, mut _r3, mut r4, mut r5) = (init, 0, 0, 0, 0);
-    loop {
-        r4 = r5 | 0x10000;
-        r5 = 3935295;
-        loop {
-            r2 = r4 & 0xff;
-            r5 = ((r5 + r2) * 65899) & 0xffffff;
-            if r4 < 256 {
-                break;
-            } else {
-                r2 = 0;
-                while (r2 + 1) * 0xff <= r4 {
-                    r2 += 1;
-                }
-                r4 = r2;
-            }
+    // part 2
+    let mut computer = Computer::with_values(ip_register, vec![0, 0, 0, 0, 0, 0]);
+    let mut hm = HashMap::new();
+    let mut count = 0usize;
+    let mut last_inserted_at = 0;
+    while computer.ip < program.len() {
+        if computer.ip == 28 && !hm.contains_key(&computer.reg.0[5]) {
+            // r5 and r0 are being compared, if r0 were the value of r5 the program would halt at this time
+            hm.insert(computer.reg.0[5], count);
+            last_inserted_at = count;
         }
-        if r5 == r0 {
+        computer.execute(&program[computer.ip]);
+        count += 1;
+        if count - last_inserted_at == 10000000 {
             break;
         }
     }
+
+    let (r0val, it) = hm.iter().max_by_key(|(&_k, &v)| v).unwrap();
+    println!("{:?}", r0val);
+    println!(
+        "{:?}",
+        hm.iter()
+            .filter(|(&_k, &v)| v == *it)
+            .min_by_key(|(&k, &_v)| k)
+    );
 }
 
 #[derive(Debug)]
