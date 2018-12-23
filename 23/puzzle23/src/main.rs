@@ -10,7 +10,7 @@ fn main() {
         .lines()
         .filter_map(Result::ok)
         .filter_map(|l| {
-            if let Some(caps) = re.captures(&l) {
+            re.captures(&l).and_then(|caps| {
                 Some(Nanobot {
                     pos: Point {
                         x: caps[1].parse().unwrap(),
@@ -19,9 +19,7 @@ fn main() {
                     },
                     r: caps[4].parse().unwrap(),
                 })
-            } else {
-                None
-            }
+            })
         })
         .collect();
 
