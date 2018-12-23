@@ -47,24 +47,24 @@ fn main() {
             // Steps in any of 18 directions are suitable candidates
             let candidates = vec![
                 cursor,
-                cursor.xadd(-step),
-                cursor.xadd(step),
-                cursor.yadd(-step),
-                cursor.yadd(step),
-                cursor.zadd(-step),
-                cursor.zadd(step),
-                cursor.xadd(-step / 2).yadd(-step / 2),
-                cursor.xadd(-step / 2).yadd(step / 2),
-                cursor.xadd(-step / 2).zadd(-step / 2),
-                cursor.xadd(-step / 2).zadd(step / 2),
-                cursor.xadd(step / 2).yadd(-step / 2),
-                cursor.xadd(step / 2).yadd(step / 2),
-                cursor.xadd(step / 2).zadd(-step / 2),
-                cursor.xadd(step / 2).zadd(step / 2),
-                cursor.yadd(-step / 2).zadd(-step / 2),
-                cursor.yadd(-step / 2).zadd(step / 2),
-                cursor.yadd(step / 2).zadd(-step / 2),
-                cursor.yadd(step / 2).zadd(step / 2),
+                cursor.add(-step, 0, 0),
+                cursor.add(step, 0, 0),
+                cursor.add(0, -step, 0),
+                cursor.add(0, step, 0),
+                cursor.add(0, 0, -step),
+                cursor.add(0, 0, step),
+                cursor.add(-step / 2, -step / 2, 0),
+                cursor.add(-step / 2, step / 2, 0),
+                cursor.add(-step / 2, 0, -step / 2),
+                cursor.add(-step / 2, 0, step / 2),
+                cursor.add(step / 2, -step / 2, 0),
+                cursor.add(step / 2, step / 2, 0),
+                cursor.add(step / 2, 0, -step / 2),
+                cursor.add(step / 2, 0, step / 2),
+                cursor.add(0, -step / 2, -step / 2),
+                cursor.add(0, -step / 2, step / 2),
+                cursor.add(0, step / 2, -step / 2),
+                cursor.add(0, step / 2, step / 2),
             ];
             // Find the candidate in range of the most bots
             let new_cursor = candidates
@@ -111,45 +111,20 @@ impl Point {
         Point { x: 0, y: 0, z: 0 }
     }
     fn diff(&self, other: &Self) -> isize {
-        (if self.x > other.x {
-            self.x - other.x
-        } else {
-            other.x - self.x
-        }) + (if self.y > other.y {
-            self.y - other.y
-        } else {
-            other.y - self.y
-        }) + (if self.z > other.z {
-            self.z - other.z
-        } else {
-            other.z - self.z
-        })
+        (self.x - other.x).abs() + (self.y - other.y).abs() + (self.z - other.z).abs()
     }
     fn size(&self) -> isize {
         self.diff(&Point::new())
     }
 
-    fn xadd(&self, dx: isize) -> Self {
+    fn add(&self, dx: isize, dy: isize, dz: isize) -> Self {
         Point {
             x: self.x + dx,
-            y: self.y,
-            z: self.z,
-        }
-    }
-    fn yadd(&self, dy: isize) -> Self {
-        Point {
-            x: self.x,
             y: self.y + dy,
-            z: self.z,
-        }
-    }
-    fn zadd(&self, dz: isize) -> Self {
-        Point {
-            x: self.x,
-            y: self.y,
             z: self.z + dz,
         }
     }
+
     fn how_many_in_range(&self, bots: &Vec<Nanobot>) -> usize {
         bots.iter()
             .filter(|&b| self.diff(&b.pos) as usize <= b.r)
