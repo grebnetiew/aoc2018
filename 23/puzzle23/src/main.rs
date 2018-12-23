@@ -47,37 +47,31 @@ fn main() {
         loop {
             let step = step_size as isize;
             // Steps in any of 18 directions are suitable candidates
-            let mut candidates = vec![
+            let candidates = vec![
                 cursor,
-                cursor.xadd(step),
-                cursor.xadd(step / 2).yadd(step / 2),
-                cursor.xadd(-step / 2).yadd(step / 2),
                 cursor.xadd(-step),
-                cursor.xadd(step / 2).yadd(-step / 2),
-                cursor.xadd(-step / 2).yadd(-step / 2),
-                cursor.yadd(step),
-                cursor.xadd(step / 2).zadd(step / 2),
-                cursor.xadd(-step / 2).zadd(step / 2),
+                cursor.xadd(step),
                 cursor.yadd(-step),
-                cursor.xadd(step / 2).zadd(-step / 2),
-                cursor.xadd(-step / 2).zadd(-step / 2),
-                cursor.zadd(step),
-                cursor.yadd(step / 2).zadd(step / 2),
-                cursor.yadd(-step / 2).zadd(step / 2),
+                cursor.yadd(step),
                 cursor.zadd(-step),
-                cursor.yadd(step / 2).zadd(-step / 2),
+                cursor.zadd(step),
+                cursor.xadd(-step / 2).yadd(-step / 2),
+                cursor.xadd(-step / 2).yadd(step / 2),
+                cursor.xadd(-step / 2).zadd(-step / 2),
+                cursor.xadd(-step / 2).zadd(step / 2),
+                cursor.xadd(step / 2).yadd(-step / 2),
+                cursor.xadd(step / 2).yadd(step / 2),
+                cursor.xadd(step / 2).zadd(-step / 2),
+                cursor.xadd(step / 2).zadd(step / 2),
                 cursor.yadd(-step / 2).zadd(-step / 2),
+                cursor.yadd(-step / 2).zadd(step / 2),
+                cursor.yadd(step / 2).zadd(-step / 2),
+                cursor.yadd(step / 2).zadd(step / 2),
             ];
-            // Sort them first by coordinates, otherwise you end up hopping between two points
-            candidates.sort_by_key(|pt| pt.x);
-            candidates.sort_by_key(|pt| pt.y);
-            candidates.sort_by_key(|pt| pt.z);
-            // Sort largest first, because max returns the last one if multiple are maximal
-            candidates.sort_by_key(|pt| -pt.size());
             // Find the candidate in range of the most bots
             let new_cursor = candidates
                 .iter()
-                .max_by_key(|pt| pt.how_many_in_range(&bots))
+                .max_by_key(|pt| (pt.how_many_in_range(&bots), -pt.size(), pt.x, pt.y, pt.z))
                 .unwrap();
             // Adjust step size
             if *new_cursor == cursor {
@@ -94,9 +88,10 @@ fn main() {
         }
     }
     println!(
-        "The sweet spot is {:?}, with distance {:?} to the origin",
+        "The sweet spot is {:?}, with distance {:?} to the origin, visible to {:?}",
         best,
-        best.size()
+        best.size(),
+        best.how_many_in_range(&bots)
     );
 }
 
