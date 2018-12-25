@@ -60,29 +60,25 @@ fn main() {
 fn parse_line(line: &String, team: Team) -> Option<ArmyGroup> {
     lazy_static! {
         static ref re_group: Regex = Regex::new(r"(\d+) units each with (\d+) hit points (\([\w ;,]*\) )?with an attack that does (\d+) (\w+) damage at initiative (\d+)").unwrap();
-        static ref re_weak: Regex = Regex::new(r"(weak|immune) to ([\w, ]+)").unwrap();
+        static ref re_weak: Regex = Regex::new(r"weak to ([\w, ]+)").unwrap();
+        static ref re_immune: Regex = Regex::new(r"immune to ([\w, ]+)").unwrap();
     }
 
-    re_group.captures(line).and_then(|caps| {
-        let mut army_group = ArmyGroup {
-            team: team,
-            units: caps[1].parse().unwrap(),
-            hp_each: caps[2].parse().unwrap(),
-            damage: caps[4].parse().unwrap(),
-            damage_type: caps[5].to_owned(),
-            initiative: caps[6].parse().unwrap(),
-            weaknesses: Vec::new(),
-            immunities: Vec::new(),
-        };
-        for caps in re_weak.captures_iter(line) {
-            let mut kinds = caps[2].split(", ").map(str::to_owned).collect();
-            match &caps[1] {
-                "weak" => army_group.weaknesses.append(&mut kinds),
-                "immune" => army_group.immunities.append(&mut kinds),
-                _ => panic!("This match of (weak|immune) matched neither?!"),
-            }
-        }
-        Some(army_group)
+    re_group.captures(line).map(|caps| ArmyGroup {
+        team: team,
+        units: caps[1].parse().unwrap(),
+        hp_each: caps[2].parse().unwrap(),
+        damage: caps[4].parse().unwrap(),
+        damage_type: caps[5].to_owned(),
+        initiative: caps[6].parse().unwrap(),
+        weaknesses: re_weak
+            .captures(line)
+            .map(|caps| caps[1].split(", ").map(str::to_owned).collect())
+            .unwrap_or_default(),
+        immunities: re_immune
+            .captures(line)
+            .map(|caps| caps[1].split(", ").map(str::to_owned).collect())
+            .unwrap_or_default(),
     })
 }
 
@@ -172,7 +168,7 @@ impl Battlefield {
                 return None;
             }
         }
-        Some(self[0].team)
+        self.get(0).map(|grp| grp.team)
     }
 
     #[allow(dead_code)]
