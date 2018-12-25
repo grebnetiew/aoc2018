@@ -167,17 +167,17 @@ impl Battlefield {
     }
 
     fn winner(&self) -> Option<Team> {
-        for i in 1..self.0.len() {
-            if self.0[i].team != self.0[0].team {
+        for i in 1..self.len() {
+            if self[i].team != self[0].team {
                 return None;
             }
         }
-        Some(self.0[0].team)
+        Some(self[0].team)
     }
 
     #[allow(dead_code)]
     fn print_all(&self) {
-        for a in self.0.iter() {
+        for a in self.iter() {
             println!("{}", a);
         }
         println!();
