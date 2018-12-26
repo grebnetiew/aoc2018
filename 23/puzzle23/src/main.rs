@@ -10,15 +10,13 @@ fn main() {
         .lines()
         .filter_map(Result::ok)
         .filter_map(|l| {
-            re.captures(&l).and_then(|caps| {
-                Some(Nanobot {
-                    pos: Point {
-                        x: caps[1].parse().unwrap(),
-                        y: caps[2].parse().unwrap(),
-                        z: caps[3].parse().unwrap(),
-                    },
-                    r: caps[4].parse().unwrap(),
-                })
+            re.captures(&l).map(|caps| Nanobot {
+                pos: Point {
+                    x: caps[1].parse().unwrap(),
+                    y: caps[2].parse().unwrap(),
+                    z: caps[3].parse().unwrap(),
+                },
+                r: caps[4].parse().unwrap(),
             })
         })
         .collect();

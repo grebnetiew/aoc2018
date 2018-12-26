@@ -132,16 +132,13 @@ impl PartialOrd for PointStep {
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-struct PointAndTool {
-    p: Point,
-    t: usize,
-}
+struct PointAndTool(Point, usize);
 
 // Yes, tool's not an enum. It's more easy to manipulate this way. I know, it's a hack :)
 
 fn shortest_path(terrain: &Vec<Vec<usize>>, start: Point, end: Point) -> usize {
     let mut prio_queue = BinaryHeap::new();
-    let mut visited: HashMap<PointAndTool, usize> = HashMap::new();
+    let mut best_time_to_state: HashMap<PointAndTool, usize> = HashMap::new();
     // Put the neighbours in as origin points
     prio_queue.push(PointStep {
         point: start,
@@ -162,22 +159,11 @@ fn shortest_path(terrain: &Vec<Vec<usize>>, start: Point, end: Point) -> usize {
             .iter()
             .filter(|pt| pt.x < terrain[0].len() && pt.y < terrain.len())
         {
-            if (!visited.contains_key(&PointAndTool {
-                p: *nb,
-                t: step.tool,
-            }) || visited[&PointAndTool {
-                p: *nb,
-                t: step.tool,
-            }] > step.time_spent + 1)
+            if (!best_time_to_state.contains_key(&PointAndTool(*nb, step.tool))
+                || best_time_to_state[&PointAndTool(*nb, step.tool)] > step.time_spent + 1)
                 && compatible(terrain[nb.y][nb.x], step.tool)
             {
-                visited.insert(
-                    PointAndTool {
-                        p: *nb,
-                        t: step.tool,
-                    },
-                    step.time_spent + 1,
-                );
+                best_time_to_state.insert(PointAndTool(*nb, step.tool), step.time_spent + 1);
                 prio_queue.push(PointStep {
                     point: *nb,
                     time_spent: step.time_spent + 1,
@@ -190,17 +176,8 @@ fn shortest_path(terrain: &Vec<Vec<usize>>, start: Point, end: Point) -> usize {
         } else {
             (step.tool + 2) % 3
         };
-        if !visited.contains_key(&PointAndTool {
-            p: step.point,
-            t: other_tool,
-        }) {
-            visited.insert(
-                PointAndTool {
-                    p: step.point,
-                    t: other_tool,
-                },
-                step.time_spent + 7,
-            );
+        if !best_time_to_state.contains_key(&PointAndTool(step.point, other_tool)) {
+            best_time_to_state.insert(PointAndTool(step.point, other_tool), step.time_spent + 7);
             prio_queue.push(PointStep {
                 point: step.point,
                 time_spent: step.time_spent + 7,
